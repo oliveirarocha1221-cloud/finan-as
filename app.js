@@ -132,8 +132,12 @@ function logout() {
 ===================== */
 
 async function carregarDashboard() {
-  await carregarLancamentos();
-  await carregarMetas();
+
+  await Promise.all([
+    carregarLancamentos(),
+    carregarMetas()
+  ]);
+
   atualizarDashboard();
   criarGrafico();
 }
@@ -161,7 +165,7 @@ function criarGrafico() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: "72%",
+      cutout: "82%",
       plugins: {
         legend: { display: false },
         tooltip: {
