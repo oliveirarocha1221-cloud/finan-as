@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanças</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="auth-screen">
+  <div class="auth-bg">
+    <div class="auth-blob blob1"></div>
+    <div class="auth-blob blob2"></div>
+    <div class="auth-blob blob3"></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-icon">₿</div>
+      <span>Finanças</span>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-login" onclick="showLogin()">Entrar</button>
+      <button class="tab-btn" id="tab-register" onclick="showRegister()">Cadastrar</button>
+      <div class="tab-indicator" id="tab-indicator"></div>
+    </div>
+    <div id="login-form" class="auth-form">
+      <div class="input-group">
+        <span class="input-icon">✉</span>
+        <input type="email" id="login-email" placeholder="Seu e-mail">
+      </div>
+      <div class="input-group">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="login-password" placeholder="Sua senha">
+      </div>
+      <button class="btn-primary" onclick="login()">
+        <span>Entrar</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <div id="register-form" class="auth-form" style="display:none;">
+      <div class="input-group">
+        <span class="input-icon">👤</span>
+        <input type="text" id="register-name" placeholder="Nome completo">
+      </div>
+      <div class="input-group">
+        <span class="input-icon">✉</span>
+        <input type="email" id="register-email" placeholder="E-mail">
+      </div>
+      <div class="input-group">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="register-password" placeholder="Senha">
+      </div>
+      <button class="btn-primary" onclick="register()">
+        <span>Criar Conta</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon-sm">₿</div>
+      <span>FinançasPro</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-btn" onclick="showPage('transactions')" id="nav-transactions">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Lançamentos
+      </button>
+      <button class="nav-btn" onclick="showPage('goals')" id="nav-goals">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        Metas
+      </button>
+      <button class="nav-btn" onclick="showPage('simulations')" id="nav-simulations">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        Simulações
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <span id="user-name-display">Usuário</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <!-- DASHBOARD -->
+    <section id="dashboard-page" class="page">
+      <div class="page-header">
+        <div>
+          <p class="page-subtitle">Visão geral</p>
+          <h1>Dashboard</h1>
+        </div>
+        <div class="date-badge" id="current-date"></div>
+      </div>
+      <div class="cards">
+        <div class="card card-balance">
+          <div class="card-label">Saldo Atual</div>
+          <div class="card-value" id="saldo-total">R$ 0,00</div>
+          <div class="card-trend" id="saldo-trend"></div>
+        </div>
+        <div class="card card-income">
+          <div class="card-label"><span class="dot dot-green"></span>Receitas</div>
+          <div class="card-value" id="total-receitas">R$ 0,00</div>
+        </div>
+        <div class="card card-expense">
+          <div class="card-label"><span class="dot dot-red"></span>Despesas</div>
+          <div class="card-value" id="total-despesas">R$ 0,00</div>
+        </div>
+      </div>
+      <div class="dashboard-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Distribuição</h3>
+            <div class="chart-legend">
+              <span><span class="dot dot-green"></span>Receitas</span>
+              <span><span class="dot dot-red"></span>Despesas</span>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="financeChart"></canvas></div>
+        </div>
+        <div class="recent-card">
+          <div class="chart-header">
+            <h3>Últimos lançamentos</h3>
+            <button class="link-btn" onclick="showPage('transactions')">Ver todos →</button>
+          </div>
+          <div id="recent-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LANÇAMENTOS -->
+    <section id="transactions-page" class="page" style="display:none;">
+      <div class="page-header">
+        <div>
+          <p class="page-subtitle">Controle</p>
+          <h1>Lançamentos</h1>
+        </div>
+      </div>
+      <div class="form-card">
+        <h3>Novo lançamento</h3>
+        <div class="form-grid">
+          <div class="select-wrap">
+            <select id="tx-type">
+              <option value="receita">💚 Receita</option>
+              <option value="despesa">❤️ Despesa</option>
+            </select>
+          </div>
+          <input type="text" id="tx-description" placeholder="Descrição">
+          <input type="number" id="tx-value" placeholder="Valor (R$)" min="0.01" step="0.01">
+          <div class="select-wrap">
+            <select id="tx-category">
+              <option>Alimentação</option>
+              <option>Moradia</option>
+              <option>Transporte</option>
+              <option>Saúde</option>
+              <option>Educação</option>
+              <option>Lazer</option>
+              <option>Outros</option>
+            </select>
+          </div>
+          <input type="date" id="tx-date">
+          <button class="btn-primary" onclick="addTransaction()">
+            <span>Adicionar</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterTransactions('all', this)">Todos</button>
+        <button class="filter-btn" onclick="filterTransactions('receita', this)">Receitas</button>
+        <button class="filter-btn" onclick="filterTransactions('despesa', this)">Despesas</button>
+      </div>
+      <div id="transactions-list"></div>
+    </section>
+
+    <!-- METAS -->
+    <section id="goals-page" class="page" style="display:none;">
+      <div class="page-header">
+        <div>
+          <p class="page-subtitle">Planejamento</p>
+          <h1>Metas Financeiras</h1>
+        </div>
+      </div>
+      <div class="form-card">
+        <h3>Nova meta</h3>
+        <div class="goal-form">
+          <input type="text" id="goal-name" placeholder="Nome da meta (ex: Viagem, Carro)">
+          <input type="number" id="goal-target" placeholder="Valor desejado (R$)" min="0.01" step="0.01">
+          <button class="btn-primary" onclick="addGoal()">
+            <span>Criar Meta</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="goals-container"></div>
+    </section>
+
+    <!-- SIMULAÇÕES -->
+    <section id="simulations-page" class="page" style="display:none;">
+      <div class="page-header">
+        <div>
+          <p class="page-subtitle">Planejamento</p>
+          <h1>Simulações</h1>
+        </div>
+      </div>
+      <div class="sim-grid">
+
+        <!-- CARD 1: quanto tempo guardando X por mês -->
+        <div class="sim-card">
+          <div class="sim-icon">⏱️</div>
+          <h3>Em quanto tempo vou atingir meu objetivo?</h3>
+          <p>Informe o valor que quer guardar e quanto consegue guardar por mês.</p>
+          <input type="number" id="sim-goal-value" placeholder="Valor do objetivo (R$)" min="1">
+          <input type="number" id="sim-monthly" placeholder="Quanto vou guardar por mês (R$)" min="1">
+          <button class="btn-primary" onclick="simulateSavings()">Calcular</button>
+          <div id="sim-result-1"></div>
+        </div>
+
+        <!-- CARD 2: quanto guardar por mês para atingir em X meses -->
+        <div class="sim-card">
+          <div class="sim-icon">🎯</div>
+          <h3>Quanto guardar por mês?</h3>
+          <p>Informe o valor desejado e em quantos meses quer atingir.</p>
+          <input type="number" id="sim-value2" placeholder="Valor desejado (R$)" min="1">
+          <input type="number" id="sim-months2" placeholder="Em quantos meses?" min="1">
+          <button class="btn-primary" onclick="simulateMonthly()">Calcular</button>
+          <div id="sim-result-2"></div>
+        </div>
+
+        <!-- CARD 3: juros compostos -->
+        <div class="sim-card">
+          <div class="sim-icon">📈</div>
+          <h3>Juros compostos</h3>
+          <p>Simule o crescimento do seu dinheiro com juros compostos.</p>
+          <input type="number" id="sim-principal" placeholder="Valor inicial (R$)" min="1">
+          <input type="number" id="sim-rate" placeholder="Taxa mensal (%)" min="0.01" step="0.01">
+          <input type="number" id="sim-period" placeholder="Período (meses)" min="1">
+          <button class="btn-primary" onclick="simulateCompound()">Calcular</button>
+          <div id="sim-result-3"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
