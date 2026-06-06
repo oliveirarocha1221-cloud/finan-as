@@ -37,7 +37,7 @@
         <span class="input-icon">🔒</span>
         <input type="password" id="login-password" placeholder="Sua senha">
       </div>
-      <button class="btn-primary" onclick="login()">
+      <button id="btn-login" class="btn-primary" onclick="login()">
         <span>Entrar</span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
@@ -55,7 +55,7 @@
         <span class="input-icon">🔒</span>
         <input type="password" id="register-password" placeholder="Senha">
       </div>
-      <button class="btn-primary" onclick="register()">
+      <button id="btn-register" class="btn-primary" onclick="register()">
         <span>Criar Conta</span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
@@ -65,6 +65,7 @@
 
 <!-- APP -->
 <div id="app" style="display:none;">
+  <!-- SIDEBAR (desktop) -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon-sm">₿</div>
@@ -87,6 +88,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         Simulações
       </button>
+      <button class="nav-btn" onclick="showPage('resumo')" id="nav-resumo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h2M8 18h2M12 14h4M12 18h4"/></svg>
+        Resumo Mensal
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="user-badge">
@@ -98,6 +103,34 @@
       </button>
     </div>
   </aside>
+
+  <!-- BOTTOM NAV (mobile) -->
+  <nav class="bottom-nav">
+    <button class="bnav-btn active" onclick="showPage('dashboard')" id="bnav-dashboard">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="bnav-btn" onclick="showPage('transactions')" id="bnav-transactions">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      <span>Lançamentos</span>
+    </button>
+    <button class="bnav-btn" onclick="showPage('goals')" id="bnav-goals">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      <span>Metas</span>
+    </button>
+    <button class="bnav-btn" onclick="showPage('simulations')" id="bnav-simulations">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      <span>Simular</span>
+    </button>
+    <button class="bnav-btn" onclick="showPage('resumo')" id="bnav-resumo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h2M8 18h2M12 14h4M12 18h4"/></svg>
+      <span>Resumo</span>
+    </button>
+    <button class="bnav-btn" onclick="logout()" id="bnav-logout">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span>Sair</span>
+    </button>
+  </nav>
 
   <main class="content">
 
@@ -222,8 +255,6 @@
         </div>
       </div>
       <div class="sim-grid">
-
-        <!-- CARD 1: quanto tempo guardando X por mês -->
         <div class="sim-card">
           <div class="sim-icon">⏱️</div>
           <h3>Em quanto tempo vou atingir meu objetivo?</h3>
@@ -233,8 +264,6 @@
           <button class="btn-primary" onclick="simulateSavings()">Calcular</button>
           <div id="sim-result-1"></div>
         </div>
-
-        <!-- CARD 2: quanto guardar por mês para atingir em X meses -->
         <div class="sim-card">
           <div class="sim-icon">🎯</div>
           <h3>Quanto guardar por mês?</h3>
@@ -244,8 +273,6 @@
           <button class="btn-primary" onclick="simulateMonthly()">Calcular</button>
           <div id="sim-result-2"></div>
         </div>
-
-        <!-- CARD 3: juros compostos -->
         <div class="sim-card">
           <div class="sim-icon">📈</div>
           <h3>Juros compostos</h3>
@@ -256,7 +283,67 @@
           <button class="btn-primary" onclick="simulateCompound()">Calcular</button>
           <div id="sim-result-3"></div>
         </div>
+      </div>
+    </section>
 
+    <!-- RESUMO MENSAL -->
+    <section id="resumo-page" class="page" style="display:none;">
+      <div class="page-header">
+        <div>
+          <p class="page-subtitle">Análise</p>
+          <h1>Resumo Mensal</h1>
+        </div>
+        <div class="resumo-nav">
+          <button class="resumo-nav-btn" onclick="resumoMesAnterior()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <span id="resumo-mes-label">—</span>
+          <button class="resumo-nav-btn" onclick="resumoMesProximo()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cards do mês selecionado -->
+      <div class="cards resumo-cards">
+        <div class="card card-balance">
+          <div class="card-label">Saldo do Mês</div>
+          <div class="card-value" id="resumo-saldo">R$ 0,00</div>
+          <div class="card-trend" id="resumo-saldo-trend"></div>
+        </div>
+        <div class="card card-income">
+          <div class="card-label"><span class="dot dot-green"></span>Receitas</div>
+          <div class="card-value" id="resumo-receitas">R$ 0,00</div>
+        </div>
+        <div class="card card-expense">
+          <div class="card-label"><span class="dot dot-red"></span>Despesas</div>
+          <div class="card-value" id="resumo-despesas">R$ 0,00</div>
+        </div>
+      </div>
+
+      <!-- Gráfico de evolução + categorias -->
+      <div class="dashboard-grid resumo-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Evolução — últimos 6 meses</h3>
+          </div>
+          <div class="chart-wrap chart-wrap-bar"><canvas id="resumoBarChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Categorias mais gastas</h3>
+            <span id="resumo-cat-mes" class="chart-sub"></span>
+          </div>
+          <div id="resumo-categorias"></div>
+        </div>
+      </div>
+
+      <!-- Tabela mês a mês -->
+      <div class="chart-card resumo-table-card">
+        <div class="chart-header">
+          <h3>Histórico mês a mês</h3>
+        </div>
+        <div id="resumo-tabela"></div>
       </div>
     </section>
 
@@ -265,5 +352,16 @@
 
 <div id="toast" class="toast"></div>
 <script src="app.js"></script>
+<script>
+  // Sync bottom nav active state with page changes
+  const _origShowPage = showPage;
+  // Patch showPage to also update bottom nav
+  window.showPage = function(page) {
+    _origShowPage(page);
+    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+    const bnavBtn = document.getElementById('bnav-' + page);
+    if (bnavBtn) bnavBtn.classList.add('active');
+  };
+</script>
 </body>
 </html>
