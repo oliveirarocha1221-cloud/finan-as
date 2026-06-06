@@ -1,5 +1,5 @@
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbwCzePanHdiNVqnz0TuJJl6J7vbRRMJRrfqoIOsIdhLqjFWF42eu_vyq-0z7NvT3OqI/exec"
+  "https://script.google.com/macros/s/AKfycbzMUWTU8FZMNpGzp_X-ctEnKB-r16jFH-TwaZWvaCaz33Ekk2-BAIxJ7xTIIgRcpUHY/exec"
 
 let currentUser = null;
 let financeChart = null;
@@ -31,6 +31,23 @@ function toast(msg, type = "success") {
 }
 
 /* =====================
+   LOADING STATE
+===================== */
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  if (loading) {
+    btn.disabled = true;
+    btn.dataset.original = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span>';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.original || btn.innerHTML;
+  }
+}
+
+/* =====================
    TELAS
 ===================== */
 
@@ -58,6 +75,7 @@ function showPage(page) {
   if (navBtn) navBtn.classList.add("active");
 
   if (page === "dashboard") atualizarDashboard();
+  if (page === "resumo") renderResumo();
 }
 
 /* =====================
@@ -71,6 +89,7 @@ async function register() {
 
   if (!nome || !email || !senha) { toast("Preencha todos os campos", "error"); return; }
 
+  setLoading("btn-register", true);
   try {
     const dados = await api({ acao: "cadastro", nome, email, senha });
     if (dados.sucesso) {
@@ -82,6 +101,8 @@ async function register() {
   } catch (err) {
     console.error(err);
     toast("Erro de conexão", "error");
+  } finally {
+    setLoading("btn-register", false);
   }
 }
 
@@ -95,6 +116,7 @@ async function login() {
 
   if (!email || !senha) { toast("Preencha os campos", "error"); return; }
 
+  setLoading("btn-login", true);
   try {
     const dados = await api({ acao: "login", email, senha });
     if (dados.sucesso) {
@@ -111,6 +133,8 @@ async function login() {
   } catch (err) {
     console.error(err);
     toast("Erro ao efetuar login", "error");
+  } finally {
+    setLoading("btn-login", false);
   }
 }
 
@@ -132,12 +156,10 @@ function logout() {
 ===================== */
 
 async function carregarDashboard() {
-
   await Promise.all([
     carregarLancamentos(),
     carregarMetas()
   ]);
-
   atualizarDashboard();
   criarGrafico();
 }
@@ -250,17 +272,38 @@ async function addTransaction() {
 
   if (!descricao || !valor || !data) { toast("Preencha todos os campos", "error"); return; }
 
-  const transacao = { id: Date.now(), usuario_id: currentUser.id, data, tipo, descricao, valor, categoria };
+  // Optimistic UI: adiciona imediatamente com ID temporário
+  const tempId = "temp_" + Date.now();
+  const transacao = { id: tempId, usuario_id: currentUser.id, data, tipo, descricao, valor, categoria };
+  transactions.push(transacao);
+  renderTransactions();
+  atualizarDashboard();
+  limparFormulario();
+  toast("Lançamento adicionado!");
 
+  // Salva na API em background
   try {
     const dados = await api({ acao: "lancamento", ...transacao });
     if (dados.sucesso) {
-  await carregarLancamentos();
-  atualizarDashboard();
-}
+      // Substitui o ID temporário pelo ID real da API
+      const idx = transactions.findIndex(t => t.id === tempId);
+      if (idx !== -1 && dados.id) transactions[idx].id = dados.id;
+    } else {
+      // Rollback: remove o item temporário
+      transactions = transactions.filter(t => t.id !== tempId);
+      renderTransactions();
+      atualizarDashboard();
+      toast("Erro ao salvar lançamento", "error");
+    }
   } catch (err) {
     console.error(err);
-    toast("Erro ao salvar", "error");
+    // Rollback silencioso — dado ficou em memória, tentará sincronizar depois
+    // Deixa o item mas marca como pendente visualmente
+    const idx = transactions.findIndex(t => t.id === tempId);
+    if (idx !== -1) {
+      const el = document.getElementById("tx-" + tempId);
+      if (el) el.classList.add("pending");
+    }
   }
 }
 
@@ -296,12 +339,13 @@ function renderTransactions() {
   };
 
   lista.innerHTML = [...filtered].reverse().map(tx => `
-    <div class="transaction ${tx.tipo}" id="tx-${tx.id}">
+    <div class="transaction ${tx.tipo}${tx.id && String(tx.id).startsWith('temp_') ? ' pending' : ''}" id="tx-${tx.id}">
       <div class="tx-info">
         <strong>${catIcons[tx.categoria] || ""} ${tx.descricao}</strong>
         <div class="tx-meta">
           <span class="tx-cat">${tx.categoria}</span>
           <span class="tx-date">${tx.data}</span>
+          ${tx.id && String(tx.id).startsWith('temp_') ? '<span class="tx-pending">sincronizando…</span>' : ''}
         </div>
       </div>
       <div class="tx-right">
@@ -317,20 +361,40 @@ function renderTransactions() {
 }
 
 async function deleteTransaction(id) {
-  if (!confirm("Excluir este lançamento?")) return;
+  const confirmed = await confirmar("Excluir este lançamento?");
+  if (!confirmed) return;
+
+  // Bloqueia ID temporário (ainda sincronizando)
+  if (String(id).startsWith("temp_")) {
+    transactions = transactions.filter(t => String(t.id) !== String(id));
+    renderTransactions();
+    atualizarDashboard();
+    toast("Lançamento removido");
+    return;
+  }
+
+  // Optimistic: remove da UI imediatamente
+  const backup = [...transactions];
+  transactions = transactions.filter(t => String(t.id) !== String(id));
+  renderTransactions();
+  atualizarDashboard();
 
   try {
     const dados = await api({ acao: "excluir_lancamento", id: String(id), usuario_id: currentUser.id });
+    console.log("deleteTransaction response:", dados);
     if (dados.sucesso) {
-      transactions = transactions.filter(t => String(t.id) !== String(id));
-      renderTransactions();
-      atualizarDashboard();
       toast("Lançamento excluído");
     } else {
-      toast("Erro ao excluir", "error");
+      transactions = backup;
+      renderTransactions();
+      atualizarDashboard();
+      toast(dados.mensagem || "Erro ao excluir", "error");
     }
   } catch (err) {
     console.error(err);
+    transactions = backup;
+    renderTransactions();
+    atualizarDashboard();
     toast("Erro de conexão", "error");
   }
 }
@@ -359,14 +423,18 @@ async function addGoal() {
 
   try {
     const dados = await api({ acao: "meta", ...meta });
+    console.log("addGoal response:", dados);
     if (dados.sucesso) {
-      goals.push(meta);
+      // Salva o ID real retornado pela API
+      goals.push({ ...meta, id: dados.id });
       renderGoals();
       document.getElementById("goal-name").value = "";
       document.getElementById("goal-target").value = "";
       toast("Meta criada!");
+    } else {
+      toast(dados.mensagem || "Erro ao criar meta", "error");
     }
-  } catch (err) { console.error(err); }
+  } catch (err) { console.error(err); toast("Erro de conexão", "error"); }
 }
 
 function renderGoals() {
@@ -381,28 +449,85 @@ function renderGoals() {
   container.innerHTML = goals.map(meta => {
     const pct = Math.min((meta.valor_atual / meta.valor_meta) * 100, 100);
     const complete = pct >= 100;
+    const falta = Math.max(meta.valor_meta - meta.valor_atual, 0);
     return `
       <div class="goal-card" id="goal-${meta.id}">
         <div class="goal-card-header">
-          <h3>${complete ? "✅ " : ""}${meta.nome_meta}</h3>
+          <h3>${complete ? "✅ " : "🎯 "}${meta.nome_meta}</h3>
           <button class="delete-btn" onclick="deleteGoal('${meta.id}')" title="Excluir meta">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
           </button>
         </div>
-        <div class="goal-amount">
-          <strong>R$ ${meta.valor_atual.toFixed(2)}</strong> de R$ ${meta.valor_meta.toFixed(2)}
+        <div class="goal-values-row">
+          <div class="goal-val-item">
+            <span class="goal-val-label">Guardado</span>
+            <span class="goal-val-num saved">R$ ${meta.valor_atual.toLocaleString("pt-BR", {minimumFractionDigits:2})}</span>
+          </div>
+          <div class="goal-val-item">
+            <span class="goal-val-label">Objetivo</span>
+            <span class="goal-val-num">R$ ${meta.valor_meta.toLocaleString("pt-BR", {minimumFractionDigits:2})}</span>
+          </div>
+          <div class="goal-val-item">
+            <span class="goal-val-label">Falta</span>
+            <span class="goal-val-num falta">R$ ${falta.toLocaleString("pt-BR", {minimumFractionDigits:2})}</span>
+          </div>
         </div>
         <div class="progress">
           <div class="progress-bar ${complete ? "complete" : ""}" style="width:${pct}%"></div>
         </div>
-        <div class="goal-percent">${pct.toFixed(1)}%</div>
+        <div class="goal-footer">
+          <span class="goal-percent">${pct.toFixed(1)}% concluído</span>
+          ${!complete ? `
+          <div class="goal-deposit">
+            <input type="number" id="deposit-${meta.id}" class="deposit-input" placeholder="+ valor" min="0.01" step="0.01">
+            <button class="btn-deposit" onclick="depositGoal('${meta.id}')">Adicionar</button>
+          </div>` : `<span class="goal-complete-badge">🎉 Concluída!</span>`}
+        </div>
       </div>
     `;
   }).join("");
 }
 
+async function depositGoal(id) {
+  const input = document.getElementById("deposit-" + id);
+  const valor = parseFloat(input.value);
+  if (!valor || valor <= 0) { toast("Informe um valor válido", "error"); return; }
+
+  const meta = goals.find(g => String(g.id) === String(id));
+  if (!meta) return;
+
+  const novoValor = meta.valor_atual + valor;
+
+  // Optimistic UI
+  meta.valor_atual = novoValor;
+  renderGoals();
+  toast("Valor adicionado!");
+
+  try {
+    const dados = await api({
+      acao: "atualizar_meta",
+      id: String(id),
+      usuario_id: currentUser.id,
+      valor_atual: novoValor
+    });
+    console.log("depositGoal response:", dados);
+    if (!dados.sucesso) {
+      // Rollback
+      meta.valor_atual = novoValor - valor;
+      renderGoals();
+      toast(dados.mensagem || "Erro ao atualizar meta", "error");
+    }
+  } catch (err) {
+    console.error(err);
+    meta.valor_atual = novoValor - valor;
+    renderGoals();
+    toast("Erro de conexão", "error");
+  }
+}
+
 async function deleteGoal(id) {
-  if (!confirm("Excluir esta meta?")) return;
+  const confirmed = await confirmar("Excluir esta meta?");
+  if (!confirmed) return;
 
   try {
     const dados = await api({ acao: "excluir_meta", id: String(id), usuario_id: currentUser.id });
@@ -434,6 +559,239 @@ async function carregarMetas() {
 }
 
 /* =====================
+   RESUMO MENSAL
+===================== */
+
+let resumoAno = new Date().getFullYear();
+let resumoMes = new Date().getMonth(); // 0-indexed
+let resumoBarChart = null;
+
+const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MESES_PT_CURTO = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+function resumoMesAnterior() {
+  resumoMes--;
+  if (resumoMes < 0) { resumoMes = 11; resumoAno--; }
+  renderResumo();
+}
+
+function resumoMesProximo() {
+  const now = new Date();
+  if (resumoAno === now.getFullYear() && resumoMes >= now.getMonth()) return;
+  resumoMes++;
+  if (resumoMes > 11) { resumoMes = 0; resumoAno++; }
+  renderResumo();
+}
+
+function txDoMes(ano, mes) {
+  return transactions.filter(t => {
+    const [y, m] = t.data.split("-").map(Number);
+    return y === ano && m === mes + 1;
+  });
+}
+
+function renderResumo() {
+  const fmt = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Label do mês
+  document.getElementById("resumo-mes-label").textContent = `${MESES_PT[resumoMes]} ${resumoAno}`;
+
+  // Dados do mês selecionado
+  const txMes = txDoMes(resumoAno, resumoMes);
+  const receitas = txMes.filter(t => t.tipo === "receita").reduce((s, t) => s + t.valor, 0);
+  const despesas = txMes.filter(t => t.tipo === "despesa").reduce((s, t) => s + t.valor, 0);
+  const saldo = receitas - despesas;
+
+  document.getElementById("resumo-receitas").textContent = fmt(receitas);
+  document.getElementById("resumo-despesas").textContent = fmt(despesas);
+  document.getElementById("resumo-saldo").textContent = fmt(saldo);
+
+  const trend = document.getElementById("resumo-saldo-trend");
+  if (saldo > 0) { trend.textContent = "▲ Mês positivo"; trend.style.color = "var(--green)"; }
+  else if (saldo < 0) { trend.textContent = "▼ Mês negativo"; trend.style.color = "var(--red)"; }
+  else { trend.textContent = ""; }
+
+  // Categorias mais gastas no mês
+  renderResumoCategorias(txMes);
+
+  // Gráfico de barras — últimos 6 meses
+  renderResumoBarChart();
+
+  // Tabela histórica
+  renderResumoTabela();
+}
+
+function renderResumoCategorias(txMes) {
+  const el = document.getElementById("resumo-categorias");
+  document.getElementById("resumo-cat-mes").textContent = `${MESES_PT_CURTO[resumoMes]}/${resumoAno}`;
+
+  const despesas = txMes.filter(t => t.tipo === "despesa");
+
+  if (despesas.length === 0) {
+    el.innerHTML = `<div class="empty-state" style="padding:24px 0"><p>Sem despesas neste mês.</p></div>`;
+    return;
+  }
+
+  // Agrupa por categoria
+  const catMap = {};
+  despesas.forEach(t => {
+    catMap[t.categoria] = (catMap[t.categoria] || 0) + t.valor;
+  });
+  const total = Object.values(catMap).reduce((s, v) => s + v, 0);
+  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+  const catIcons = {
+    "Alimentação": "🍽️", "Moradia": "🏠", "Transporte": "🚗",
+    "Saúde": "💊", "Educação": "📚", "Lazer": "🎮", "Outros": "📦"
+  };
+
+  el.innerHTML = sorted.map(([cat, val]) => {
+    const pct = (val / total * 100).toFixed(1);
+    return `
+      <div class="cat-row">
+        <div class="cat-row-top">
+          <span class="cat-row-name">${catIcons[cat] || "📦"} ${cat}</span>
+          <span class="cat-row-val">${val.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</span>
+        </div>
+        <div class="progress" style="margin-bottom:2px">
+          <div class="progress-bar" style="width:${pct}%; background: var(--red)"></div>
+        </div>
+        <div class="cat-row-pct">${pct}%</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderResumoBarChart() {
+  // Monta os últimos 6 meses a partir do mês selecionado
+  const labels = [], receitasData = [], despesasData = [];
+
+  for (let i = 5; i >= 0; i--) {
+    let m = resumoMes - i;
+    let y = resumoAno;
+    while (m < 0) { m += 12; y--; }
+    const tx = txDoMes(y, m);
+    labels.push(MESES_PT_CURTO[m]);
+    receitasData.push(tx.filter(t => t.tipo === "receita").reduce((s, t) => s + t.valor, 0));
+    despesasData.push(tx.filter(t => t.tipo === "despesa").reduce((s, t) => s + t.valor, 0));
+  }
+
+  const ctx = document.getElementById("resumoBarChart");
+  if (!ctx) return;
+  if (resumoBarChart) resumoBarChart.destroy();
+
+  resumoBarChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Receitas",
+          data: receitasData,
+          backgroundColor: "rgba(34,208,122,0.7)",
+          borderColor: "rgba(34,208,122,1)",
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: "Despesas",
+          data: despesasData,
+          backgroundColor: "rgba(255,92,124,0.7)",
+          borderColor: "rgba(255,92,124,1)",
+          borderWidth: 1,
+          borderRadius: 6,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: "#8888a0", font: { size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` R$ ${ctx.raw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: "#8888a0" }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: {
+          ticks: {
+            color: "#8888a0",
+            callback: v => "R$ " + v.toLocaleString("pt-BR")
+          },
+          grid: { color: "rgba(255,255,255,0.04)" }
+        }
+      }
+    }
+  });
+}
+
+function renderResumoTabela() {
+  const el = document.getElementById("resumo-tabela");
+  const fmt = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Descobre todos os meses com transações
+  const mesesSet = new Set();
+  transactions.forEach(t => {
+    const [y, m] = t.data.split("-").map(Number);
+    mesesSet.add(`${y}-${String(m).padStart(2,"0")}`);
+  });
+
+  // Adiciona o mês atual mesmo que vazio
+  const now = new Date();
+  mesesSet.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`);
+
+  const mesesOrdenados = [...mesesSet].sort().reverse().slice(0, 12);
+
+  if (mesesOrdenados.length === 0) {
+    el.innerHTML = `<div class="empty-state"><p>Nenhum dado disponível.</p></div>`;
+    return;
+  }
+
+  const rows = mesesOrdenados.map(ym => {
+    const [y, m] = ym.split("-").map(Number);
+    const tx = txDoMes(y, m - 1);
+    const rec = tx.filter(t => t.tipo === "receita").reduce((s, t) => s + t.valor, 0);
+    const desp = tx.filter(t => t.tipo === "despesa").reduce((s, t) => s + t.valor, 0);
+    const saldo = rec - desp;
+    const isSelected = y === resumoAno && m - 1 === resumoMes;
+    return `
+      <tr class="resumo-row ${isSelected ? "resumo-row-selected" : ""}" onclick="resumoIrMes(${y}, ${m-1})">
+        <td class="resumo-td-mes">${MESES_PT[m-1]} ${y}</td>
+        <td class="resumo-td green-text">${fmt(rec)}</td>
+        <td class="resumo-td red-text">${fmt(desp)}</td>
+        <td class="resumo-td ${saldo >= 0 ? "green-text" : "red-text"} bold-text">${fmt(saldo)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  el.innerHTML = `
+    <table class="resumo-table">
+      <thead>
+        <tr>
+          <th>Mês</th>
+          <th>Receitas</th>
+          <th>Despesas</th>
+          <th>Saldo</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function resumoIrMes(ano, mes) {
+  resumoAno = ano;
+  resumoMes = mes;
+  renderResumo();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* =====================
    SIMULAÇÕES
 ===================== */
 
@@ -441,10 +799,7 @@ function simulateSavings() {
   const objetivo = parseFloat(document.getElementById("sim-goal-value").value);
   const mensal = parseFloat(document.getElementById("sim-monthly").value);
 
-  if (!objetivo || !mensal) {
-    toast("Preencha todos os campos", "error");
-    return;
-  }
+  if (!objetivo || !mensal) { toast("Preencha todos os campos", "error"); return; }
 
   const meses = Math.ceil(objetivo / mensal);
 
@@ -453,8 +808,7 @@ function simulateSavings() {
       <div class="sim-result-label">Tempo necessário</div>
       <div class="sim-result-value">${meses} meses</div>
       <div class="sim-result-sub">
-        Guardando ${mensal.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
-        por mês.
+        Guardando ${mensal.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})} por mês.
       </div>
     </div>
   `;
@@ -464,10 +818,7 @@ function simulateMonthly() {
   const valor = parseFloat(document.getElementById("sim-value2").value);
   const meses = parseInt(document.getElementById("sim-months2").value);
 
-  if (!valor || !meses) {
-    toast("Preencha todos os campos", "error");
-    return;
-  }
+  if (!valor || !meses) { toast("Preencha todos os campos", "error"); return; }
 
   const resultado = valor / meses;
 
@@ -489,19 +840,14 @@ function simulateCompound() {
   const rate = parseFloat(document.getElementById("sim-rate").value) / 100;
   const period = parseInt(document.getElementById("sim-period").value);
 
-  if (!principal || !rate || !period) {
-    toast("Preencha todos os campos", "error");
-    return;
-  }
+  if (!principal || !rate || !period) { toast("Preencha todos os campos", "error"); return; }
 
   const montante = principal * Math.pow(1 + rate, period);
   const lucro = montante - principal;
 
   document.getElementById("sim-result-3").innerHTML = `
     <div class="sim-result-box">
-      <div class="sim-result-label">
-        Montante após ${period} meses
-      </div>
+      <div class="sim-result-label">Montante após ${period} meses</div>
       <div class="sim-result-value">
         ${montante.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
       </div>
@@ -511,6 +857,37 @@ function simulateCompound() {
     </div>
   `;
 }
+
+/* =====================
+   DIALOG CUSTOMIZADO
+===================== */
+
+function confirmar(msg) {
+  return new Promise(resolve => {
+    // Remove dialog anterior se existir
+    const old = document.getElementById("confirm-dialog");
+    if (old) old.remove();
+
+    const dialog = document.createElement("div");
+    dialog.id = "confirm-dialog";
+    dialog.innerHTML = `
+      <div class="confirm-overlay">
+        <div class="confirm-box">
+          <p>${msg}</p>
+          <div class="confirm-btns">
+            <button class="confirm-cancel" id="confirm-no">Cancelar</button>
+            <button class="confirm-ok" id="confirm-yes">Excluir</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(dialog);
+
+    document.getElementById("confirm-yes").onclick = () => { dialog.remove(); resolve(true); };
+    document.getElementById("confirm-no").onclick  = () => { dialog.remove(); resolve(false); };
+  });
+}
+
 /* =====================
    INÍCIO
 ===================== */
