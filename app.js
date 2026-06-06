@@ -165,7 +165,7 @@ function criarGrafico() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: "82%",
+      cutout: "72%",
       plugins: {
         legend: { display: false },
         tooltip: {
