@@ -1074,50 +1074,526 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   line-height: 1.6;
 }
 
+/* Mobile styles now handled by the bottom nav section below */
 /* =====================
-   MOBILE
+   SPINNER (loading state)
 ===================== */
 
-@media(max-width: 900px) {
-  #app { flex-direction: column; }
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* =====================
+   PENDING TRANSACTION
+===================== */
+
+.transaction.pending {
+  opacity: 0.65;
+}
+
+.tx-pending {
+  font-size: 10px;
+  color: var(--yellow);
+  letter-spacing: 0.03em;
+}
+
+/* =====================
+   BOTTOM NAV (mobile only)
+===================== */
+
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Oculta sidebar no mobile */
   .sidebar {
+    display: none !important;
+  }
+
+  /* Mostra a bottom nav */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(17, 17, 24, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border2);
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+    gap: 0;
+    justify-content: space-around;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
+  }
+
+  .bnav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text3);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 4px;
+    border-radius: 12px;
+    transition: color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bnav-btn svg {
+    stroke: currentColor;
+    transition: stroke 0.15s;
+  }
+
+  .bnav-btn.active {
+    color: var(--accent2);
+    background: rgba(124,110,245,0.1);
+  }
+
+  .bnav-btn:active {
+    transform: scale(0.92);
+  }
+
+  /* Logout btn na bottom nav fica vermelho */
+  #bnav-logout {
+    color: var(--text3);
+  }
+  #bnav-logout:hover,
+  #bnav-logout:active {
+    color: var(--red);
+  }
+
+  /* Padding no conteúdo para não ficar atrás da bottom nav */
+  #app {
+    flex-direction: column;
+  }
+
+  .content {
+    padding: 20px 16px 90px !important;
+  }
+
+  /* Cards em coluna */
+  .cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .card-value {
+    font-size: 22px;
+  }
+
+  /* Dashboard grid em coluna */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Simulações em coluna */
+  .sim-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Goal form em coluna */
+  .goal-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Form grid em coluna */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Page header mais compacto */
+  .page-header {
+    margin-bottom: 20px;
+  }
+
+  .page h1, h1 {
+    font-size: 22px;
+  }
+
+  /* Auth card mais ajustado */
+  .auth-card {
+    padding: 28px 24px;
+  }
+
+  /* Toast na parte de cima no mobile para não cobrir bottom nav */
+  .toast {
+    bottom: auto;
+    top: 20px;
+    right: 16px;
+    left: 16px;
+    max-width: 100%;
+    text-align: center;
+  }
+}
+
+/* =====================
+   CONFIRM DIALOG
+===================== */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: fadeOverlay 0.15s ease;
+}
+
+@keyframes fadeOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.confirm-box {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  padding: 28px 24px 20px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+  animation: scaleIn 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.confirm-box p {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.confirm-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-cancel,
+.confirm-ok {
+  flex: 1;
+  padding: 11px;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.confirm-cancel {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+}
+
+.confirm-ok {
+  background: var(--red);
+  color: #fff;
+}
+
+.confirm-cancel:active,
+.confirm-ok:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+
+/* =====================
+   GOAL CARD — DEPOSIT
+===================== */
+
+.goal-values-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.goal-val-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.goal-val-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+}
+
+.goal-val-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.goal-val-num.saved  { color: var(--green); }
+.goal-val-num.falta  { color: var(--red); }
+
+.goal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.goal-percent {
+  font-size: 12px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.goal-complete-badge {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 500;
+}
+
+.goal-deposit {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.deposit-input {
+  width: 110px;
+  padding: 8px 10px;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.deposit-input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(34,208,122,0.12);
+}
+
+.btn-deposit {
+  padding: 8px 14px;
+  background: rgba(34,208,122,0.12);
+  border: 1px solid rgba(34,208,122,0.25);
+  border-radius: 8px;
+  color: var(--green);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-deposit:hover {
+  background: rgba(34,208,122,0.2);
+}
+
+.btn-deposit:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .goal-deposit {
     width: 100%;
-    height: auto;
-    position: relative;
-    flex-direction: row;
-    flex-wrap: wrap;
-    padding: 16px;
+  }
+  .deposit-input {
+    flex: 1;
+    width: auto;
+  }
+}
+
+/* =====================
+   RESUMO MENSAL
+===================== */
+
+.resumo-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.resumo-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.resumo-nav-btn:hover { color: var(--accent2); }
+
+.chart-wrap-bar {
+  height: 220px;
+}
+
+.chart-sub {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.resumo-grid {
+  margin-bottom: 16px;
+}
+
+.resumo-table-card {
+  margin-top: 0;
+}
+
+/* Categorias */
+.cat-row {
+  margin-bottom: 14px;
+}
+
+.cat-row:last-child { margin-bottom: 0; }
+
+.cat-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.cat-row-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cat-row-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red);
+}
+
+.cat-row-pct {
+  font-size: 11px;
+  color: var(--text3);
+  text-align: right;
+  margin-top: 2px;
+}
+
+/* Tabela */
+.resumo-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.resumo-table thead th {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text3);
+  text-align: left;
+  padding: 0 16px 12px;
+}
+
+.resumo-table thead th:not(:first-child) {
+  text-align: right;
+}
+
+.resumo-row {
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.resumo-row:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.resumo-row-selected {
+  background: rgba(124,110,245,0.08) !important;
+}
+
+.resumo-td {
+  padding: 12px 16px;
+  font-size: 14px;
+  text-align: right;
+  color: var(--text2);
+}
+
+.resumo-td-mes {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+}
+
+.green-text { color: var(--green) !important; }
+.red-text   { color: var(--red) !important; }
+.bold-text  { font-weight: 700; font-family: 'Syne', sans-serif; }
+
+@media (max-width: 768px) {
+  .resumo-nav {
+    font-size: 12px;
+    padding: 5px 10px;
     gap: 8px;
   }
 
-  .sidebar-logo { margin-bottom: 0; }
-
-  .sidebar-nav {
-    flex-direction: row;
-    flex: none;
-    flex-wrap: wrap;
-    gap: 4px;
+  .resumo-table thead th:nth-child(2),
+  .resumo-td:nth-child(2) {
+    display: none; /* Esconde "Receitas" no mobile, fica só despesas e saldo */
   }
 
-  .nav-btn { padding: 8px 12px; font-size: 13px; }
-
-  .sidebar-footer {
-    margin-top: 0;
-    margin-left: auto;
+  .resumo-td, .resumo-td-mes {
+    padding: 10px 10px;
+    font-size: 13px;
   }
-
-  .content { padding: 20px; }
-
-  .cards { grid-template-columns: 1fr; }
-
-  .dashboard-grid { grid-template-columns: 1fr; }
-
-  .sim-grid { grid-template-columns: 1fr; }
-
-  .goal-form { grid-template-columns: 1fr; }
-}
-
-@media(max-width: 600px) {
-  .form-grid { grid-template-columns: 1fr; }
 }
